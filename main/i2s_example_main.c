@@ -17,7 +17,7 @@
 #include <math.h>
 
 
-#define SAMPLE_RATE     (36000)
+#define SAMPLE_RATE     (48000)
 #define I2S_NUM         (0)
 #define WAVE_FREQ_HZ    (100)
 #define PI              (3.14159265)
@@ -92,7 +92,7 @@ void app_main(void)
         .communication_format = I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB,
         .dma_buf_count = 6,
         .dma_buf_len = 60,
-        .use_apll = false,
+        .use_apll = true,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1                                //Interrupt level 1
     };
     i2s_pin_config_t pin_config = {
@@ -104,14 +104,13 @@ void app_main(void)
     i2s_driver_install(I2S_NUM, &i2s_config, 0, NULL);
     i2s_set_pin(I2S_NUM, &pin_config);
 
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0_CLK_OUT1);
+    WRITE_PERI_REG(PIN_CTRL, READ_PERI_REG(PIN_CTRL) & 0xFFFFFFF0);
+
     int test_bits = 16;
     while (1) {
         setup_triangle_sine_waves(test_bits);
         vTaskDelay(5000/portTICK_RATE_MS);
-        test_bits += 8;
-        if(test_bits > 32)
-            test_bits = 16;
-
     }
 
 }
