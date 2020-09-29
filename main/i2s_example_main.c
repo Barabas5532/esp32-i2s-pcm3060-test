@@ -20,7 +20,7 @@
 //64Fs BCK, 256Fs MCK
 //bit of a hack, but 32 bit data is supported, we need to make sure we only
 //use the top 24 bits
-#ifdef USE_32BIT
+#if 0
 #define BITS            (32)
 #define MCK             (256*SAMPLE_RATE)
 #else
@@ -32,61 +32,29 @@
 
 #define SAMPLE_RATE     (48000)
 #define I2S_NUM         (1)
-#define WAVE_FREQ_HZ    (100)
-#define PI              (3.14159265)
 #define I2S_BCK_IO      (GPIO_NUM_13)
 #define I2S_WS_IO       (GPIO_NUM_15)
 #define I2S_DO_IO       (GPIO_NUM_21)
 #define I2S_DI_IO       (-1)
 
-#define SAMPLE_PER_CYCLE (SAMPLE_RATE/WAVE_FREQ_HZ)
-
-static void setup_triangle_sine_waves(int bits)
+static void setup(int bits)
 {
-    int *samples_data = malloc(((bits+8)/16)*SAMPLE_PER_CYCLE*4);
-    unsigned int i, sample_val;
-    double sin_float, triangle_float, triangle_step = (double) pow(2, bits) / SAMPLE_PER_CYCLE;
+    //XXX not sure how many bytes there are exactly, but this fills up the
+    //whole buffer for a continous output
+    const int buffer_size_bytes = 6*60*4*4;
+    int *samples_data = malloc(buffer_size_bytes);
     size_t i2s_bytes_write = 0;
 
-    printf("\r\nTest bits=%d free mem=%d, written data=%d\n", bits, esp_get_free_heap_size(), ((bits+8)/16)*SAMPLE_PER_CYCLE*4);
-
-    triangle_float = -(pow(2, bits)/2 - 1);
-
-    for(i = 0; i < SAMPLE_PER_CYCLE; i++) {
-        sin_float = sin(i * PI / 180.0);
-        if(sin_float >= 0)
-            triangle_float += triangle_step;
-        else
-            triangle_float -= triangle_step;
-
-        sin_float *= (pow(2, bits)/2 - 1);
-
-        if (bits == 16) {
-            sample_val = 0;
-            sample_val += (short)triangle_float;
-            sample_val = sample_val << 16;
-            sample_val += (short) sin_float;
-            samples_data[i] = sample_val;
-        } else if (bits == 24) { //1-bytes unused
-            samples_data[i*2] = ((int) triangle_float) << 8;
-            samples_data[i*2 + 1] = ((int) sin_float) << 8;
-        } else {
-            samples_data[i*2] = ((int) triangle_float);
-            samples_data[i*2 + 1] = ((int) sin_float);
-        }
-
+    //fill the whole buffer with a pattern of all 1s on the left channel, and
+    //all 0s on the right channel
+    for(int i = 0; i < buffer_size_bytes/4/2; i++) {
+        samples_data[i*2] = ((int) 0xFFFFFFFF);
+        samples_data[i*2 + 1] = ((int) 0x00000000);
     }
 
     i2s_set_clk(I2S_NUM, SAMPLE_RATE, bits, 2);
-    //Using push
-    // for(i = 0; i < SAMPLE_PER_CYCLE; i++) {
-    //     if (bits == 16)
-    //         i2s_push_sample(0, &samples_data[i], 100);
-    //     else
-    //         i2s_push_sample(0, &samples_data[i*2], 100);
-    // }
-    // or write
-    i2s_write(I2S_NUM, samples_data, ((bits+8)/16)*SAMPLE_PER_CYCLE*4, &i2s_bytes_write, 100);
+    i2s_write(I2S_NUM, samples_data, buffer_size_bytes, &i2s_bytes_write, 100);
+    printf("wrote %d bytes out of %d\n", i2s_bytes_write, buffer_size_bytes);
 
     free(samples_data);
 }
@@ -125,10 +93,8 @@ void app_main(void)
     WRITE_PERI_REG(PIN_CTRL, READ_PERI_REG(PIN_CTRL) | 0x0000000F);
 #endif
     
-
-    int test_bits = BITS;
+    setup(BITS);
     while (1) {
-        setup_triangle_sine_waves(test_bits);
         vTaskDelay(5000/portTICK_RATE_MS);
     }
 
