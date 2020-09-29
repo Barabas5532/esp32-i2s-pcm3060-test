@@ -16,9 +16,21 @@
 #include "esp_system.h"
 #include <math.h>
 
+//alternative setup 
+//64Fs BCK, 256Fs MCK
+//bit of a hack, but 32 bit data is supported, we need to make sure we only
+//use the top 24 bits
+#if 0
+#define BITS            (32)
+#define MCK             (256*SAMPLE_RATE)
+#endif
+
+//48Fs BCK, 384Fs MCK
+#define BITS            (24)
+#define MCK             (384*SAMPLE_RATE)
 
 #define SAMPLE_RATE     (48000)
-#define I2S_NUM         (0)
+#define I2S_NUM         (1)
 #define WAVE_FREQ_HZ    (100)
 #define PI              (3.14159265)
 #define I2S_BCK_IO      (GPIO_NUM_13)
@@ -87,7 +99,8 @@ void app_main(void)
     i2s_config_t i2s_config = {
         .mode = I2S_MODE_MASTER | I2S_MODE_TX,                                  // Only TX
         .sample_rate = SAMPLE_RATE,
-        .bits_per_sample = 16,
+        .fixed_mclk = MCK,
+        .bits_per_sample = BITS,
         .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,                           //2-channels
         .communication_format = I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB,
         .dma_buf_count = 6,
@@ -107,7 +120,7 @@ void app_main(void)
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0_CLK_OUT1);
     WRITE_PERI_REG(PIN_CTRL, READ_PERI_REG(PIN_CTRL) & 0xFFFFFFF0);
 
-    int test_bits = 16;
+    int test_bits = BITS;
     while (1) {
         setup_triangle_sine_waves(test_bits);
         vTaskDelay(5000/portTICK_RATE_MS);
