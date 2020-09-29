@@ -20,14 +20,15 @@
 //64Fs BCK, 256Fs MCK
 //bit of a hack, but 32 bit data is supported, we need to make sure we only
 //use the top 24 bits
-#if 0
+#ifdef USE_32BIT
 #define BITS            (32)
 #define MCK             (256*SAMPLE_RATE)
-#endif
-
+#else
+//normal setup
 //48Fs BCK, 384Fs MCK
 #define BITS            (24)
 #define MCK             (384*SAMPLE_RATE)
+#endif
 
 #define SAMPLE_RATE     (48000)
 #define I2S_NUM         (1)
@@ -118,7 +119,12 @@ void app_main(void)
     i2s_set_pin(I2S_NUM, &pin_config);
 
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0_CLK_OUT1);
+#if I2S_NUM == 0
     WRITE_PERI_REG(PIN_CTRL, READ_PERI_REG(PIN_CTRL) & 0xFFFFFFF0);
+#else
+    WRITE_PERI_REG(PIN_CTRL, READ_PERI_REG(PIN_CTRL) | 0x0000000F);
+#endif
+    
 
     int test_bits = BITS;
     while (1) {
