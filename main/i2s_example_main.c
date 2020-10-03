@@ -48,8 +48,8 @@ static void setup(int bits)
     //fill the whole buffer with a pattern of all 1s on the left channel, and
     //all 0s on the right channel
     for(int i = 0; i < buffer_size_bytes/4/2; i++) {
-        samples_data[i*2] = ((int) 0xFFFFFFFF);
-        samples_data[i*2 + 1] = ((int) 0x00000000);
+        samples_data[i*2] = ((int) i<<8);
+        samples_data[i*2 + 1] = ((int) i<<8);
     }
 
     i2s_set_clk(I2S_NUM, SAMPLE_RATE, bits, 2);
